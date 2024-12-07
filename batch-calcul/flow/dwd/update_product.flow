@@ -1,0 +1,44 @@
+config:
+  # 失败后 间隔指定时间 失败后重跑至多指定次数
+  retries: 0
+  retry.backoff: 120000
+
+  start_datetime: "${azkaban.flow.start.year}-${azkaban.flow.start.month}-${azkaban.flow.start.day}"
+  end_datetime: "${azkaban.flow.start.year}-${azkaban.flow.start.month}-${azkaban.flow.start.day}"
+  backtrack_day_num: 0
+  overall_subtract_day: 0
+  topic_hour: "${azkaban.flow.start.year}${azkaban.flow.start.month}${azkaban.flow.start.day}${azkaban.flow.start.hour}"
+  engine: spark
+  hive_max_dynamic_partitions: 12000
+  hive_max_dynamic_partitions_pernode: 4000
+  db_prefix: ""
+  env_suffix: ""
+    
+nodes:
+  - name: update_product
+    type: command
+    dependsOn:
+      - sync_clickhouse-dwd-product
+    config:
+      command: echo "converge update base product"
+
+  - name: dwd-product
+    type: command
+    dependsOn:
+      - ods_sap-v_base_product
+    config:
+      command: sh execute_hive.sh --sql_file_path ../../update_table/dwd/product.sql --env_type prod --engine ${engine} --hive_max_dynamic_partitions ${hive_max_dynamic_partitions} --hive_max_dynamic_partitions_pernode ${hive_max_dynamic_partitions_pernode} --start_datetime ${start_datetime} --end_datetime ${end_datetime} --is_realtime 0 --backtrack_day_num ${backtrack_day_num} --overall_subtract_day ${overall_subtract_day} --topic_hour ${topic_hour} --in_sales_season_stat 0 --past_sales_season_stat 0 
+
+  - name: ods_sap-v_base_product
+    type: command
+    dependsOn:
+    config:
+      command: 
+
+  - name: sync_clickhouse-dwd-base_product
+    type: command
+    dependsOn:
+      - dwd-product
+    config:
+      command: sh ../../sync_tables/export_scripts/dwd/sync_ck_dwd_product.sh ${start_datetime} ${end_datetime} ${backtrack_day_num} ${topic_hour}
+
