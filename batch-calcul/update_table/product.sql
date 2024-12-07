@@ -1,5 +1,6 @@
-insert overwrite product 
-as select product_code,
+use dwd;
+insert overwrite table product 
+select product_code,
        product_name,
        color_code,
        color_name
